@@ -1,0 +1,12 @@
+{
+  "base_url": "https://hxxs.mrrac.com",
+  "login_send_endpoint": "/sendCode",
+  "login_verify_endpoint": "/login",
+  "category": "1",
+  "channel_map": {
+    "1799": 2
+  },
+  "default_channel": 3,
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 MicroMessenger/7.0.20.1781(0x6700143B) NetType/WIFI MiniProgramEnv/Windows WindowsWechat/WMPF WindowsWechat(0x63090a1b)XWEB/11275",
+  "referer": "https://servicewechat.com/wxf3d088fc4d192e93/179/page-frame.html"
+}

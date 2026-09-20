@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>浣熊先生洗衣助手</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #f3f4f6; }
+    .card {
+      background: #fff;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 700;
+      font-size: 1.125rem;
+    }
+    .card-body { padding: 1rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+    }
+    .badge-available { background-color: #22c55e; }
+    .badge-busy { background-color: #f97316; }
+    .badge-maintenance { background-color: #9ca3af; }
+    .badge-offline { background-color: #ef4444; }
+    .machine-row:hover { background-color: #f9fafb; }
+    .machine-row.selected { background-color: #eff6ff; }
+    .btn-primary {
+      background-color: #3b82f6;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary:hover { background-color: #2563eb; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-success { background-color: #22c55e; }
+    .btn-success:hover { background-color: #16a34a; }
+    .btn-danger { background-color: #ef4444; }
+    .btn-danger:hover { background-color: #dc2626; }
+    .btn-secondary {
+      background-color: #e5e7eb;
+      color: #374151;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-secondary:hover { background-color: #d1d5db; }
+    .form-select, .form-input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+    }
+    .form-select:focus, .form-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 0.5rem;
+      width: 100%;
+      max-width: 420px;
+      padding: 1.5rem;
+    }
+  </style>
+</head>
+<body class="text-gray-800">
+  <div class="max-w-5xl mx-auto p-4">
+    <!-- 顶部 -->
+    <div class="card">
+      <div class="card-body flex items-center gap-3">
+        <div class="bg-gray-200 rounded-full p-2">
+          <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold">浣熊先生洗衣助手</h1>
+          <p class="text-sm text-gray-500">指定洗衣机空闲后只提交一次订单，付款仍在微信小程序完成</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 账号条 -->
+    <div class="card">
+      <div class="card-body flex items-center justify-between bg-green-50/50">
+        <div id="accountInfo" class="text-sm">
+          <span class="text-gray-500">当前未登录</span>
+        </div>
+        <div class="flex gap-2">
+          <button id="loginBtn" class="btn-primary" onclick="openLogin()">登录 / 切换账号</button>
+          <button id="logoutBtn" class="btn-secondary hidden" onclick="logout()">退出</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. 选择任务 -->
+    <div class="card">
+      <div class="card-header">1. 选择任务</div>
+      <div class="card-body grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">洗衣分类</label>
+          <select id="category" class="form-select">
+            <option value="1">浣熊专洗</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">洗衣模式</label>
+          <select id="way" class="form-select">
+            <option value="QUICK_WASH">快速洗</option>
+            <option value="GENERAL">标准洗</option>
+            <option value="LONG_WASH">深度洗</option>
+            <option value="DEHY">脱水模式</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">我的专属桶</label>
+          <input id="bucketNumber" class="form-input" type="text" placeholder="例如 0004650571" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">轮询间隔（秒）</label>
+          <input id="interval" class="form-input" type="number" value="8" min="1" max="60" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 选择洗衣机 -->
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <span>2. 选择洗衣机</span>
+        <button id="refreshBtn" class="btn-secondary" onclick="loadWashers()">
+          <span class="inline-flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            立即刷新
+          </span>
+        </button>
+      </div>
+      <div class="card-body p-0 overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="px-4 py-2 w-16">选择</th>
+              <th class="px-4 py-2">洗衣机</th>
+              <th class="px-4 py-2 w-48">状态</th>
+            </tr>
+          </thead>
+          <tbody id="washersBody" class="divide-y">
+            <tr><td colspan="3" class="px-4 py-6 text-center text-gray-400">点击右上角“立即刷新”加载洗衣机列表</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 3. 等待空闲并下单 -->
+    <div class="card">
+      <div class="card-header">3. 等待空闲并下单</div>
+      <div class="card-body space-y-3">
+        <div id="targetInfo" class="text-sm text-gray-600">
+          目标：未选择洗衣机
+        </div>
+        <div class="flex gap-3">
+          <button id="startBtn" class="btn-primary btn-success" onclick="startPoll()" disabled>
+            洗衣机空闲后下单
+          </button>
+          <button id="stopBtn" class="btn-secondary btn-danger" onclick="stopPoll()" disabled>
+            停止等待
+          </button>
+        </div>
+        <div id="pollStatus" class="text-sm text-orange-600 hidden"></div>
+      </div>
+    </div>
+
+    <!-- 4. 运行记录 -->
+    <div class="card">
+      <div class="card-header">4. 运行记录</div>
+      <div class="card-body p-0 max-h-64 overflow-y-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 text-gray-600 sticky top-0">
+            <tr>
+              <th class="px-4 py-2 w-40">时间</th>
+              <th class="px-4 py-2">内容</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody" class="divide-y">
+            <tr><td colspan="2" class="px-4 py-4 text-center text-gray-400">暂无运行记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="text-center text-xs text-gray-400 py-4">
+      仅在本机运行，下单成功后自动停止；不会自动付款
+    </div>
+  </div>
+
+  <!-- 登录弹窗 -->
+  <div id="loginModal" class="modal-overlay">
+    <div class="modal space-y-4">
+      <h2 class="text-lg font-bold">账号登录</h2>
+      <p class="text-xs text-gray-500">Token 仅在服务端内存保存，不会写入浏览器。</p>
+      <div>
+        <label class="block text-sm font-medium mb-1">手机号</label>
+        <input id="loginPhone" class="form-input" type="tel" placeholder="11 位手机号" />
+      </div>
+      <div class="flex gap-2">
+        <input id="loginCode" class="form-input" type="text" placeholder="短信验证码" />
+        <button id="sendCodeBtn" class="btn-primary whitespace-nowrap" onclick="sendCode()">发送验证码</button>
+      </div>
+      <div class="relative">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t"></div></div>
+        <div class="relative flex justify-center text-xs text-gray-500"><span class="bg-white px-2">或</span></div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">手动粘贴 Token</label>
+        <textarea id="manualToken" class="form-input" rows="2" placeholder="如果短信接口未配置，可直接粘贴抓包获取的 token"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button class="btn-secondary" onclick="closeLogin()">取消</button>
+        <button class="btn-primary" onclick="doLogin()">登录</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedWashId = null;
+    let selectedMachineText = '';
+    let pollRunning = false;
+
+    async function getJSON(url, opts = {}) {
+      const resp = await fetch(url, opts);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return resp.json();
+    }
+
+    function setStatus(msg, type = 'info') {
+      const el = document.getElementById('pollStatus');
+      el.textContent = msg;
+      el.className = 'text-sm ' + (type === 'error' ? 'text-red-600' : 'text-orange-600');
+      el.classList.remove('hidden');
+    }
+
+    async function updateAccount() {
+      try {
+        const r = await getJSON('/api/account');
+        const info = document.getElementById('accountInfo');
+        if (r.data && r.data.loggedIn) {
+          info.innerHTML = `<span class="font-medium">${r.data.phone}</span>
+            <span class="ml-2 text-gray-400">Token 标识 ${r.data.tokenId}</span>`;
+          document.getElementById('loginBtn').textContent = '切换账号';
+          document.getElementById('logoutBtn').classList.remove('hidden');
+        } else {
+          info.innerHTML = '<span class="text-gray-500">当前未登录</span>';
+          document.getElementById('loginBtn').textContent = '登录 / 切换账号';
+          document.getElementById('logoutBtn').classList.add('hidden');
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    function openLogin() { document.getElementById('loginModal').classList.add('show'); }
+    function closeLogin() { document.getElementById('loginModal').classList.remove('show'); }
+
+    let codeCountdown = 0;
+    async function sendCode() {
+      const phone = document.getElementById('loginPhone').value.trim();
+      if (!/^1\d{10}$/.test(phone)) { alert('请输入正确的手机号'); return; }
+      const btn = document.getElementById('sendCodeBtn');
+      try {
+        btn.disabled = true;
+        const r = await getJSON('/api/send_code', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        if (!r.success) throw new Error(r.msg);
+        alert('验证码发送请求已提交，请注意查收短信');
+        codeCountdown = 60;
+        const timer = setInterval(() => {
+          codeCountdown--;
+          if (codeCountdown <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = '发送验证码'; }
+          else { btn.textContent = `${codeCountdown}s`; }
+        }, 1000);
+      } catch (e) {
+        alert('发送失败：' + e.message);
+        btn.disabled = false;
+      }
+    }
+
+    async function doLogin() {
+      const phone = document.getElementById('loginPhone').value.trim();
+      const code = document.getElementById('loginCode').value.trim();
+      const token = document.getElementById('manualToken').value.trim();
+      if (!phone) { alert('请输入手机号'); return; }
+      try {
+        const r = await getJSON('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, code, token })
+        });
+        if (!r.success) throw new Error(r.msg);
+        closeLogin();
+        await updateAccount();
+        loadWashers();
+      } catch (e) { alert('登录失败：' + e.message); }
+    }
+
+    async function logout() {
+      try {
+        await getJSON('/api/logout', { method: 'POST' });
+        await updateAccount();
+      } catch (e) { alert('退出失败：' + e.message); }
+    }
+
+    function stateBadge(stateName, remainTime) {
+      if (stateName === '可用') {
+        return `<span class="badge badge-available">空闲可下单</span>`;
+      }
+      if (stateName === '维护中') {
+        return `<span class="badge badge-maintenance">维护中</span>`;
+      }
+      let extra = '';
+      if (remainTime && remainTime > 0) extra = `<span class="ml-2 text-gray-500">约 ${remainTime} 分钟</span>`;
+      return `<span class="badge badge-busy">${stateName}</span>${extra}`;
+    }
+
+    function htmlEscape(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function selectMachine(inputEl) {
+      const row = inputEl.closest('.machine-row');
+      selectedWashId = parseInt(inputEl.value, 10);
+      selectedMachineText = row ? row.dataset.info : '';
+      document.querySelectorAll('.machine-row').forEach(r => r.classList.remove('selected'));
+      if (row) row.classList.add('selected');
+      updateTarget();
+    }
+
+    function updateTarget() {
+      const bucket = document.getElementById('bucketNumber').value.trim();
+      const way = document.getElementById('way');
+      const wayText = way.options[way.selectedIndex].text;
+      const el = document.getElementById('targetInfo');
+      if (selectedWashId) {
+        el.innerHTML = `目标：${selectedMachineText}；专属桶：${bucket || '未填写'}；模式：${wayText}。`;
+        document.getElementById('startBtn').disabled = !bucket;
+      } else {
+        el.innerHTML = '目标：未选择洗衣机';
+        document.getElementById('startBtn').disabled = true;
+      }
+    }
+
+    async function loadWashers() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.innerHTML = '刷新中...';
+      try {
+        const r = await getJSON('/api/washers');
+        if (!r.success) throw new Error(r.msg);
+        const list = r.data || [];
+        const tbody = document.getElementById('washersBody');
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-gray-400">暂无洗衣机数据</td></tr>';
+          return;
+        }
+        tbody.innerHTML = list.map(w => {
+          const checked = selectedWashId === w.washId ? 'checked' : '';
+          return `
+            <tr data-wash-id="${w.washId}" data-info="${htmlEscape(w.washAllInfo)}" class="machine-row border-b ${selectedWashId === w.washId ? 'selected' : ''}">
+              <td class="px-4 py-3"><input type="radio" name="washId" value="${w.washId}" ${checked}></td>
+              <td class="px-4 py-3">
+                <div class="font-medium">${htmlEscape(w.washAllInfo)}</div>
+                <div class="text-xs text-gray-400">${htmlEscape(w.number || w.showNumber || '')}</div>
+              </td>
+              <td class="px-4 py-3">${stateBadge(w.stateName, w.remainTime)}</td>
+            </tr>`;
+        }).join('');
+        // 事件委托，避免 HTML 属性注入
+        tbody.querySelectorAll('input[name="washId"]').forEach(radio => {
+          radio.addEventListener('change', () => selectMachine(radio));
+        });
+      } catch (e) {
+        document.getElementById('washersBody').innerHTML = `<tr><td colspan="3" class="px-4 py-6 text-center text-red-500">加载失败：${e.message}</td></tr>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>立即刷新</span>`;
+      }
+    }
+
+    async function startPoll() {
+      const bucket = document.getElementById('bucketNumber').value.trim();
+      const way = document.getElementById('way').value;
+      const interval = parseInt(document.getElementById('interval').value) || 8;
+      if (!bucket) { alert('请先填写专属桶编号'); return; }
+      if (selectedWashId == null) { alert('请先选择一台目标洗衣机'); return; }
+      try {
+        const r = await getJSON('/api/poll/start', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bucketNumber: bucket, way, interval, washId: selectedWashId })
+        });
+        if (!r.success) throw new Error(r.msg);
+        pollRunning = true;
+        updatePollUI();
+        setStatus('监控中：洗衣机空闲后将自动下单');
+      } catch (e) { alert('启动失败：' + e.message); }
+    }
+
+    async function stopPoll() {
+      try {
+        await getJSON('/api/poll/stop', { method: 'POST' });
+        pollRunning = false;
+        updatePollUI();
+        setStatus('监控已停止');
+      } catch (e) { alert('停止失败：' + e.message); }
+    }
+
+    function updatePollUI() {
+      document.getElementById('startBtn').disabled = pollRunning;
+      document.getElementById('stopBtn').disabled = !pollRunning;
+    }
+
+    async function loadLogs() {
+      try {
+        const r = await getJSON('/api/logs');
+        const logs = r.data || [];
+        const tbody = document.getElementById('logsBody');
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="2" class="px-4 py-4 text-center text-gray-400">暂无运行记录</td></tr>';
+          return;
+        }
+        tbody.innerHTML = logs.map(l => {
+          const color = l.level === 'error' ? 'text-red-600' : (l.level === 'warning' ? 'text-orange-600' : 'text-gray-700');
+          return `<tr class="border-b"><td class="px-4 py-2 text-gray-500 whitespace-nowrap">${l.time}</td><td class="px-4 py-2 ${color}">${l.message}</td></tr>`;
+        }).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function checkPollStatus() {
+      try {
+        const r = await getJSON('/api/poll/status');
+        pollRunning = r.data && r.data.running;
+        updatePollUI();
+        if (pollRunning) setStatus('监控中：洗衣机空闲后将自动下单');
+      } catch (e) { console.error(e); }
+    }
+
+    // 监听任务参数变化
+    ['bucketNumber', 'way'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateTarget);
+      document.getElementById(id).addEventListener('change', updateTarget);
+    });
+
+    // 初始化
+    (async () => {
+      await updateAccount();
+      await checkPollStatus();
+      setInterval(loadLogs, 2000);
+      setInterval(checkPollStatus, 3000);
+      if (document.getElementById('loginBtn').textContent === '切换账号') {
+        loadWashers();
+      }
+    })();
+  </script>
+</body>
+</html>
